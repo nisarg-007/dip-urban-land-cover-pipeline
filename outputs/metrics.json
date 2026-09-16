@@ -1,0 +1,169 @@
+{
+  "source": {
+    "file": "naip_raw.png",
+    "size_px": [
+      1024,
+      1024
+    ],
+    "resolution_m_per_px": 1.0,
+    "provider": "USGS NAIP (National Map ImageServer), U.S. Government public domain",
+    "scene": "I-45/I-59 interchange & Buffalo Bayou, downtown Houston, TX"
+  },
+  "gamma_correction": {
+    "shadow_pixel_definition": "darkest 25th percentile of scene",
+    "shadow_intensity_threshold": 125.0,
+    "mean_shadow_intensity_before": 89.49521224030805,
+    "target_mean_shadow_intensity": 110.0,
+    "gamma_used": 1.2453608035067303,
+    "mean_shadow_intensity_after": 109.10572070076597
+  },
+  "linear_contrast_stretch": {
+    "p2": 80.0,
+    "p98": 233.0,
+    "dynamic_range_before": 190,
+    "dynamic_range_after": 255
+  },
+  "clahe": {
+    "clip_limit": 2.5,
+    "tile_grid": [
+      8,
+      8
+    ],
+    "mean_local_std_overall": {
+      "clahe": 47.65953063964844,
+      "global_he": 50.09069061279297
+    },
+    "mean_local_std_pre_equalization": {
+      "dark_quartile": 53.980506896972656,
+      "bright_quartile": 38.9366569519043
+    },
+    "contrast_gain_in_dark_quartile": {
+      "clahe": 0.9989941816166108,
+      "global_he": 0.9086455718762636
+    },
+    "contrast_gain_in_bright_quartile": {
+      "clahe": 1.144810562073461,
+      "global_he": 1.3696226054816636
+    },
+    "dark_to_bright_gain_balance_ratio": {
+      "clahe": 0.8726283760059392,
+      "global_he": 0.6634276977026928
+    },
+    "more_balanced_method": "clahe",
+    "note": "gain = local-std(output)/local-std(pre-equalization input) in that tone band; balance ratio = dark-band gain / bright-band gain, closer to 1.0 means the method boosted local contrast about as much in shadows as in bright pavement instead of skewing toward one band. 'more_balanced_method' is computed from the logged ratios, not assumed."
+  },
+  "median_filter": {
+    "noise_injected": "salt_and_pepper",
+    "amount": 0.02,
+    "candidates": [
+      {
+        "k": 3,
+        "mse_vs_clean": 156.2320556640625,
+        "edge_corr_vs_clean": 0.5931520244019667
+      },
+      {
+        "k": 5,
+        "mse_vs_clean": 388.66998291015625,
+        "edge_corr_vs_clean": 0.3810472823640718
+      },
+      {
+        "k": 7,
+        "mse_vs_clean": 622.433837890625,
+        "edge_corr_vs_clean": 0.27372369994362683
+      }
+    ],
+    "kernel_chosen": 3,
+    "selection_rule": "smallest kernel within 10% of the minimum MSE vs. the clean (pre-noise) reference, i.e. the smallest window that still removes the salt-and-pepper noise without unnecessary blur",
+    "mse_vs_clean_at_chosen_k": 156.2320556640625,
+    "edge_correlation_at_chosen_k": 0.5931520244019667
+  },
+  "laplacian_sharpening": {
+    "kernel_size": 3,
+    "weights_tested": [
+      {
+        "weight": 0.01,
+        "clipped_pixel_fraction": 0.02498912811279297,
+        "high_freq_energy": 114.54910278320312
+      },
+      {
+        "weight": 0.02,
+        "clipped_pixel_fraction": 0.029191017150878906,
+        "high_freq_energy": 122.91975975036621
+      },
+      {
+        "weight": 0.03,
+        "clipped_pixel_fraction": 0.03449821472167969,
+        "high_freq_energy": 131.61816596984863
+      },
+      {
+        "weight": 0.05,
+        "clipped_pixel_fraction": 0.04586315155029297,
+        "high_freq_energy": 149.02320098876953
+      },
+      {
+        "weight": 0.1,
+        "clipped_pixel_fraction": 0.07848072052001953,
+        "high_freq_energy": 190.93423080444336
+      },
+      {
+        "weight": 0.15,
+        "clipped_pixel_fraction": 0.11300182342529297,
+        "high_freq_energy": 229.2198543548584
+      },
+      {
+        "weight": 0.2,
+        "clipped_pixel_fraction": 0.14726924896240234,
+        "high_freq_energy": 263.66923332214355
+      },
+      {
+        "weight": 0.3,
+        "clipped_pixel_fraction": 0.21202945709228516,
+        "high_freq_energy": 322.29391860961914
+      },
+      {
+        "weight": 0.4,
+        "clipped_pixel_fraction": 0.26848411560058594,
+        "high_freq_energy": 370.07215881347656
+      },
+      {
+        "weight": 0.6,
+        "clipped_pixel_fraction": 0.35765552520751953,
+        "high_freq_energy": 444.293664932251
+      }
+    ],
+    "weight_chosen": 0.05,
+    "clip_budget": 0.05,
+    "clipped_pixel_fraction": 0.04586315155029297,
+    "note": "largest weight tested that keeps clipped (0/255) pixel fraction at or below the 5% budget, to bound overshoot/ringing on high-contrast roof/road edges while still sharpening"
+  },
+  "fft_filtering": {
+    "cutoff_rule": "smallest radius capturing 90% of cumulative radial power",
+    "cutoff_radius_px": 125,
+    "image_size_px": [
+      1024,
+      1024
+    ],
+    "lowpass_output": "05c_fft_lowpass.png (coarse land-cover regions)",
+    "highpass_output": "05d_fft_highpass.png (fine structure: street grid, rooftops)"
+  },
+  "canny": {
+    "threshold_rule": "median-of-gradient heuristic: low=0.66*median(|grad|), high=1.33*median(|grad|)",
+    "median_gradient_magnitude": 99.56907150315303,
+    "low_threshold": 65.715587192081,
+    "high_threshold": 132.42686509919352,
+    "edge_pixel_fraction": 0.27579593658447266
+  },
+  "harris": {
+    "block_size": 2,
+    "ksize": 3,
+    "k": 0.04,
+    "threshold_rule": "0.01 * max response",
+    "num_corner_pixels": 61967
+  },
+  "yolo_extension": {
+    "attempted": true,
+    "success": true,
+    "num_detections": 0,
+    "detections": []
+  }
+}
