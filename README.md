@@ -68,22 +68,49 @@ https://imagery.nationalmap.gov/arcgis/rest/services/USGSNAIPImagery/ImageServer
   &size=1024,1024&format=png&f=image
 ```
 
-## Running it
+## Running it, step by step
 
-```bash
-pip install opencv-python-headless numpy scipy matplotlib ultralytics
-python scripts/dip_pipeline.py
-```
+1. **Clone the repo.**
+   ```bash
+   git clone https://github.com/nisarg-007/dip-urban-land-cover-pipeline.git
+   cd dip-urban-land-cover-pipeline
+   ```
 
-The script reads `data/naip_raw.png`, writes every stage's output image into `outputs/`, and
-writes `outputs/metrics.json` with the full parameter log. No manual steps or hand-tuned constants
-are required; `ultralytics` (the optional YOLO extension) is the only heavy dependency — if it
-isn't installed, that one stage logs the import error into `metrics.json` and the rest of the
-pipeline still completes normally.
+2. **Install dependencies.**
+   ```bash
+   pip install opencv-python-headless numpy scipy matplotlib ultralytics
+   ```
+   `ultralytics` (the optional YOLO extension) is the only heavy dependency — if you skip it,
+   that one stage logs the import error into `metrics.json` and every other stage still runs.
 
-This was independently re-run on a second machine to confirm the required five categories
-(point processing, histogram processing, spatial filtering, frequency-domain filtering, edge &
-corner detection) reproduce identical parameter values with no manual tweaking.
+3. **Run the pipeline.**
+   ```bash
+   python scripts/dip_pipeline.py
+   ```
+   The script reads the already-included `data/naip_raw.png` — no download step, no manual
+   parameters to set. Internally it runs strictly in this order, each stage feeding the next:
+   1. load the crop and convert to grayscale
+   2. **point processing** — solve gamma from the shadow-quartile mean, then percentile-based
+      linear contrast stretch
+   3. **histogram processing** — CLAHE on the stretched image, benchmarked against global
+      histogram equalization
+   4. **spatial filtering** — inject synthetic noise and search median kernel sizes, then
+      Laplacian/unsharp sharpen the clean CLAHE output
+   5. **frequency-domain filtering** — FFT the original grayscale image, pick a cutoff radius
+      from its radial power spectrum, produce the low-pass and high-pass results
+   6. **edge & corner detection** — Canny on the sharpened image (thresholds from its gradient
+      histogram), Harris corners on the same image
+   7. **optional extension** — pretrained YOLOv8n on the original color crop
+   8. write every intermediate image to `outputs/`, build the `08_summary_grid.png` comparison
+      figure, and write `outputs/metrics.json` with every derived parameter
+
+4. **Inspect the results.** Open `outputs/08_summary_grid.png` for the quick before/after view,
+   `outputs/metrics.json` for every number, or `report/REPORT.md` for the full write-up with the
+   formula and justification behind each parameter.
+
+This was independently re-run on a second machine, from a fresh clone, to confirm the required
+five categories (point processing, histogram processing, spatial filtering, frequency-domain
+filtering, edge & corner detection) reproduce identical parameter values with no manual tweaking.
 
 ## Key results at a glance
 
@@ -112,7 +139,8 @@ Full numbers, formulas, and the validation/review process are in
 
 ## License
 
-The NAIP imagery in `data/naip_raw.png` is produced by the USDA Farm Production and Conservation
-Business Center and is U.S. Government public domain (free to use/redistribute); USDA/USGS
-attribution is included per their terms. No license file has been added for the code in this
-repo — add one (e.g. MIT) if you want it to be reusable by others.
+The code in this repo (`scripts/dip_pipeline.py` and everything else Group H wrote) is under the
+[MIT License](LICENSE). The NAIP imagery in `data/naip_raw.png` is produced by the USDA Farm
+Production and Conservation Business Center and is U.S. Government public domain (free to
+use/redistribute); USDA/USGS attribution is included per their terms and is separate from the
+MIT license on the code.
