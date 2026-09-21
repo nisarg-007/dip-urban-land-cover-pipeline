@@ -1,0 +1,59 @@
+Independent local verification run
+===================================
+
+Purpose: confirm the published GitHub repo actually runs end-to-end on a
+separate machine, from a clean checkout, with no manual tweaking.
+
+1. Clone
+--------
+$ git clone https://github.com/nisarg-007/dip-urban-land-cover-pipeline.git
+$ cd dip-urban-land-cover-pipeline
+$ git rev-parse HEAD
+8ab5b5daae47eed2f101e1dc0f21238dc456cc24
+(commit message: "Add MIT license and expand README with step-by-step execution order")
+
+2. Dependencies
+---------------
+$ pip install opencv-python-headless numpy scipy matplotlib ultralytics
+opencv-python-headless, numpy, scipy, matplotlib: installed successfully.
+ultralytics: install FAILED locally with "No space left on device" (heavy
+torch dependency). This is the optional extension only; per the README this
+stage is designed to degrade gracefully rather than crash the pipeline, so
+the run proceeded without it (see step 4).
+
+3. Run
+------
+$ time python scripts/dip_pipeline.py
+...
+real    0m2.516s
+
+Script completed with no errors. Wrote 20 files to outputs/ plus
+outputs/metrics.json.
+
+4. Reproduced key metrics (compare against report/REPORT.md)
+--------------------------------------------------------------
+Gamma correction:        gamma = 1.245   (shadow mean 89.5 -> 109.1, target 110.0)
+FFT cutoff radius:       125             (90% of AC power, 1024px frame)
+Median filter:           k = 3           (MSE 156.2 vs clean reference)
+Sharpening weight:       0.05            (4.6% clipped pixels)
+Canny thresholds:        low=65.7, high=132.4   (27.6% edge pixels)
+Harris corners:          ~62k corner-flagged pixels (k=0.04)
+CLAHE vs global HE:      dark/bright gain-balance ratio 0.87 vs 0.66
+YOLOv8 (optional):       {"attempted": true, "success": false,
+                          "error": "No module named 'ultralytics'"}
+                          -> graceful degradation confirmed, exactly as
+                          documented in README/REPORT.
+
+All floating-point values (gamma, FFT cutoff, Canny thresholds) matched the
+values already published in report/REPORT.md to full precision, confirming
+the pipeline is deterministic and reproducible from a clean clone with no
+manual parameter tweaking.
+
+5. Conclusion
+-------------
+The published repository, cloned fresh and run with only the documented
+"pip install" + "python scripts/dip_pipeline.py" steps, reproduces the
+exact results claimed in report/REPORT.md and degrades gracefully on the
+one missing optional dependency, exactly as documented. This folder
+(verification/) contains this log plus the metrics.json and output images
+produced by that run, as evidence.
