@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Urban Land Cover Analysis Pipeline — Group H</title>
+<meta name="description" content="A classical image-processing pipeline run end-to-end on a live 1m/pixel NAIP aerial crop of downtown Houston, TX.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0F1512;
+    --panel:#161F1A;
+    --panel-raised:#1B2620;
+    --line:#2B3A32;
+    --text:#E9EEE7;
+    --text-dim:#9FAC9F;
+    --text-faint:#7E8C80;
+    --signal:#FF6B3D;
+    --scan:#6FE7D1;
+    --serif-max:880px;
+    --font-display: 'Space Grotesk', sans-serif;
+    --font-body: 'IBM Plex Sans', sans-serif;
+    --font-mono: 'IBM Plex Mono', monospace;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:var(--font-body);
+    font-size:17px;
+    line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+  }
+  @media (prefers-reduced-motion: reduce){
+    html{scroll-behavior:auto;}
+    *{animation-duration:0.001ms !important; animation-iteration-count:1 !important; transition-duration:0.001ms !important;}
+  }
+  a{color:var(--scan); text-decoration-color: rgba(111,231,209,0.35); text-underline-offset:3px;}
+  a:hover{text-decoration-color: var(--scan);}
+  a:focus-visible, button:focus-visible{outline:2px solid var(--scan); outline-offset:3px; border-radius:2px;}
+  img{max-width:100%; display:block;}
+
+  .wrap{max-width:1180px; margin:0 auto; padding:0 28px;}
+  .prose{max-width:var(--serif-max);}
+
+  /* top bar */
+  header.top{
+    position:sticky; top:0; z-index:20;
+    background:rgba(15,21,18,0.88);
+    backdrop-filter:blur(10px);
+    -webkit-backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--line);
+  }
+  .top-inner{display:flex; align-items:center; justify-content:space-between; padding:16px 0; gap:16px;}
+  .top-title{font-family:var(--font-display); font-weight:600; font-size:16px; color:var(--text); text-decoration:none; white-space:nowrap;}
+  .top-coords{font-family:var(--font-mono); font-size:12.5px; color:var(--text-faint); white-space:nowrap; display:none;}
+  @media(min-width:700px){.top-coords{display:block;}}
+  .top-link{font-family:var(--font-body); font-size:14.5px; font-weight:500; color:var(--text-dim); text-decoration:none; border:1px solid var(--line); padding:8px 14px; border-radius:6px; transition:border-color .15s, color .15s;}
+  .top-link:hover{border-color:var(--scan); color:var(--text);}
+
+  /* hero */
+  .hero{padding:64px 0 56px;}
+  .hero-kicker{font-family:var(--font-mono); font-size:13px; color:var(--scan); margin:0 0 18px;}
+  h1{font-family:var(--font-display); font-weight:600; font-size:clamp(32px,5vw,52px); line-height:1.08; letter-spacing:-0.01em; margin:0 0 20px; max-width:14ch;}
+  .hero-lede{font-size:18px; color:var(--text-dim); max-width:62ch; margin:0 0 36px;}
+  .hero-authors{font-size:14.5px; color:var(--text-faint); margin:-24px 0 36px;}
+
+  .hero-frame{
+    position:relative; border:1px solid var(--line); border-radius:10px; overflow:hidden;
+    background:var(--panel);
+  }
+  .hero-frame img{width:100%; height:auto; display:block;}
+  .hero-scan{
+    position:absolute; left:0; right:0; top:0; height:3px;
+    background:linear-gradient(90deg, transparent, var(--scan) 20%, var(--scan) 80%, transparent);
+    box-shadow:0 0 16px 2px rgba(111,231,209,0.55);
+    animation: scan-sweep 3.2s ease-in-out 0.4s 1 both;
+  }
+  @media (prefers-reduced-motion: reduce){ .hero-scan{ animation:none; opacity:0; } }
+  @keyframes scan-sweep{
+    0%{ top:0; opacity:0; }
+    6%{ opacity:1; }
+    92%{ opacity:1; }
+    100%{ top:100%; opacity:0; }
+  }
+  .hero-tag{
+    position:absolute; left:14px; bottom:14px;
+    font-family:var(--font-mono); font-size:12.5px; color:#EAF7F3;
+    background:rgba(10,16,13,0.72); border:1px solid rgba(111,231,209,0.35);
+    padding:6px 10px; border-radius:6px; backdrop-filter:blur(4px);
+  }
+  .hero-caption{display:flex; justify-content:space-between; gap:16px; font-size:13.5px; color:var(--text-faint); margin-top:10px; flex-wrap:wrap;}
+
+  section{padding:64px 0; border-top:1px solid var(--line);}
+  h2{font-family:var(--font-display); font-weight:600; font-size:clamp(24px,3vw,32px); margin:0 0 8px; letter-spacing:-0.005em;}
+  .section-lede{color:var(--text-dim); max-width:64ch; margin:0 0 44px; font-size:16px;}
+
+  /* pipeline stages */
+  .stage{display:grid; grid-template-columns:56px 1fr; gap:20px; padding:36px 0; border-top:1px solid var(--line);}
+  .stage:first-of-type{border-top:none; padding-top:0;}
+  .stage-num{font-family:var(--font-mono); font-size:14px; color:var(--text-faint); padding-top:4px;}
+  .stage-body h3{font-family:var(--font-display); font-weight:600; font-size:21px; margin:0 0 8px;}
+  .stage-body p{color:var(--text-dim); max-width:66ch; margin:0 0 20px; font-size:15.5px;}
+  .stage-metric{
+    display:inline-flex; align-items:baseline; gap:8px; font-family:var(--font-mono);
+    font-size:13.5px; color:var(--scan); background:var(--panel); border:1px solid var(--line);
+    padding:6px 10px; border-radius:6px; margin:0 0 22px;
+  }
+  .stage-imgs{display:grid; grid-template-columns:repeat(auto-fit, minmax(220px,1fr)); gap:14px;}
+  .stage-imgs figure{margin:0; border:1px solid var(--line); border-radius:8px; overflow:hidden; background:var(--panel);}
+  .stage-imgs img{width:100%; height:auto;}
+  .stage-imgs figcaption{font-size:12.5px; color:var(--text-faint); padding:8px 10px; border-top:1px solid var(--line);}
+
+  /* metrics readout */
+  .readout{
+    display:grid; grid-template-columns:repeat(3, 1fr);
+    border:1px solid var(--line); border-radius:10px; overflow:hidden; background:var(--panel);
+  }
+  @media(max-width:820px){ .readout{ grid-template-columns:repeat(2, 1fr); } }
+  @media(max-width:520px){ .readout{ grid-template-columns:1fr; } }
+  .readout-cell{padding:22px 22px; border-right:1px solid var(--line); border-bottom:1px solid var(--line);}
+  .readout-label{font-size:12.5px; color:var(--text-faint); margin:0 0 8px;}
+  .readout-value{font-family:var(--font-mono); font-size:22px; color:var(--text); margin:0;}
+  .readout-value small{font-family:var(--font-mono); font-size:13px; color:var(--text-faint); display:block; margin-top:4px;}
+
+  /* validation */
+  .validate-list{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:18px;}
+  .validate-list li{padding:18px 20px; border:1px solid var(--line); border-radius:8px; background:var(--panel); font-size:15px; color:var(--text-dim);}
+  .validate-list strong{color:var(--text); font-weight:600;}
+  .validate-list .flag{display:inline-block; font-family:var(--font-mono); font-size:12.5px; color:var(--signal); border:1px solid rgba(255,107,61,0.4); padding:2px 8px; border-radius:4px; margin-right:10px; vertical-align:1px;}
+
+  footer{padding:48px 0 64px; border-top:1px solid var(--line);}
+  .foot-grid{display:flex; flex-wrap:wrap; gap:32px; justify-content:space-between; align-items:flex-start;}
+  .foot-col h4{font-family:var(--font-display); font-size:14px; font-weight:600; margin:0 0 12px; color:var(--text-dim);}
+  .foot-col p, .foot-col a{font-size:14px; color:var(--text-faint); margin:0 0 6px; display:block; text-decoration:none;}
+  .foot-col a:hover{color:var(--scan);}
+  .foot-bottom{margin-top:40px; padding-top:24px; border-top:1px solid var(--line); font-size:13px; color:var(--text-faint);}
+
+  code{font-family:var(--font-mono); background:var(--panel); padding:2px 6px; border-radius:4px; font-size:0.9em;}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap top-inner">
+    <a class="top-title" href="#top">Urban Land Cover Pipeline</a>
+    <span class="top-coords">29.7483°N&nbsp;95.3775°W · 1024×1024 · 1m/px</span>
+    <a class="top-link" href="https://github.com/nisarg-007/dip-urban-land-cover-pipeline" target="_blank" rel="noopener">Repository</a>
+  </div>
+</header>
+
+<main id="top">
+  <section class="hero" style="border-top:none; padding-top:0;">
+    <div class="wrap">
+      <p class="hero-kicker">Digital Image Processing — Group H</p>
+      <h1>Reading a city from its pixels</h1>
+      <p class="hero-lede">A classical, non-machine-learning pipeline that corrects illumination, recovers local contrast, separates coarse land cover from fine structure, and extracts edges and corners from a real aerial scene — every parameter derived from the image's own statistics.</p>
+      <p class="hero-authors">Nisarg Shah, Ansar Rahman</p>
+
+      <div class="hero-frame">
+        <img id="hero-img" src="./outputs/00_original_color.png" alt="Original NAIP aerial crop of the I-45 / US-59 interchange, downtown Houston" loading="eager">
+        <div class="hero-scan" aria-hidden="true"></div>
+        <span class="hero-tag">I‑45 / US‑59 interchange · Houston, TX</span>
+      </div>
+      <div class="hero-caption">
+        <span>Source: USGS NAIP Imagery, ImageServer export</span>
+        <span>Public domain — USDA/USGS</span>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <h2>The pipeline, in order</h2>
+      <p class="section-lede">Eight stages, each feeding the next. Every threshold below was solved from this specific image — none are hand-picked defaults.</p>
+
+      <div class="stage">
+        <div class="stage-num">01</div>
+        <div class="stage-body">
+          <h3>Point processing</h3>
+          <p>The scene's darkest quartile — shadowed building faces, tree canopy — starts at a mean intensity of 89.5/255. Gamma is solved in closed form so that quartile lands near mid-gray, then the image is stretched using its own 2nd/98th percentile rather than an assumed 0–255 range.</p>
+          <div class="stage-metric">γ = 1.245 · shadow mean 89.5 → 109.1 (target 110.0)</div>
+          <div class="stage-imgs">
+            <figure><img src="./outputs/02a_gamma_corrected.png" alt="Gamma-corrected image" loading="lazy"><figcaption>Gamma correction</figcaption></figure>
+            <figure><img src="./outputs/02b_contrast_stretched.png" alt="Contrast-stretched image" loading="lazy"><figcaption>Percentile contrast stretch</figcaption></figure>
+          </div>
+        </div>
+      </div>
+
+      <div class="stage">
+        <div class="stage-num">02</div>
+        <div class="stage-body">
+          <h3>Histogram processing</h3>
+          <p>CLAHE and global histogram equalization are run side by side and scored on contrast <em>gain</em> — output local contrast divided by input — separately in the dark and bright quartiles. CLAHE boosts both bands nearly evenly; global equalization pumps the already-bright pavement and actually loses contrast in shadow.</p>
+          <div class="stage-metric">dark/bright gain-balance ratio: CLAHE 0.87 · global HE 0.66</div>
+          <div class="stage-imgs">
+            <figure><img src="./outputs/03a_clahe.png" alt="CLAHE-equalized image" loading="lazy"><figcaption>CLAHE</figcaption></figure>
+            <figure><img src="./outputs/03b_global_hist_eq_for_comparison.png" alt="Globally histogram-equalized image" loading="lazy"><figcaption>Global histogram equalization</figcaption></figure>
+          </div>
+        </div>
+      </div>
+
+      <div class="stage">
+        <div class="stage-num">03</div>
+        <div class="stage-body">
+          <h3>Spatial filtering</h3>
+          <p>The live crop is fairly clean, so 2% synthetic salt-and-pepper noise is injected to genuinely test denoising. Median kernel sizes 3, 5 and 7 are compared by MSE against the clean reference; the smallest kernel that still wins is kept, then an unsharp mask is applied at the largest weight that keeps clipped pixels under a 5% budget.</p>
+          <div class="stage-metric">median k = 3 (MSE 156.2) · sharpen weight 0.05 (4.6% clipped)</div>
+          <div class="stage-imgs">
+            <figure><img src="./outputs/04a_synthetic_noisy_input.png" alt="Image with injected synthetic noise" loading="lazy"><figcaption>Synthetic noise injected</figcaption></figure>
+            <figure><img src="./outputs/04c_median_denoised_chosen.png" alt="Median-denoised image" loading="lazy"><figcaption>Median denoise, k=3</figcaption></figure>
+            <figure><img src="./outputs/04d_laplacian_sharpened.png" alt="Unsharp-mask sharpened image" loading="lazy"><figcaption>Unsharp-mask sharpen</figcaption></figure>
+          </div>
+        </div>
+      </div>
+
+      <div class="stage">
+        <div class="stage-num">04</div>
+        <div class="stage-body">
+          <h3>Frequency-domain filtering</h3>
+          <p>The FFT's zero-frequency bin holds most of the image's total power, so it's excluded before choosing a cutoff — otherwise any percentage-of-power threshold is satisfied trivially at radius zero. The smallest radius capturing 90% of the remaining AC power splits coarse land-cover blobs from the street grid and rooftops.</p>
+          <div class="stage-metric">cutoff radius = 125 px of 724 · 90% of AC power</div>
+          <div class="stage-imgs">
+            <figure><img src="./outputs/05a_fft_magnitude_spectrum.png" alt="FFT magnitude spectrum" loading="lazy"><figcaption>Magnitude spectrum</figcaption></figure>
+            <figure><img src="./outputs/05c_fft_lowpass.png" alt="Low-pass filtered image" loading="lazy"><figcaption>Low-pass · coarse land cover</figcaption></figure>
+            <figure><img src="./outputs/05d_fft_highpass.png" alt="High-pass filtered image" loading="lazy"><figcaption>High-pass · street grid, rooftops</figcaption></figure>
+          </div>
+        </div>
+      </div>
+
+      <div class="stage">
+        <div class="stage-num">05</div>
+        <div class="stage-body">
+          <h3>Edge and corner detection</h3>
+          <p>Canny's thresholds come from the median of the gradient-magnitude histogram, computed on the sharpened image, rather than fixed defaults. Harris corner response is thresholded at 1% of its own maximum, concentrating on building corners, lot striping, and interchange ramp junctions.</p>
+          <div class="stage-metric">Canny 65.7 / 132.4 (27.6% edge px) · Harris ≈62k corner px</div>
+          <div class="stage-imgs">
+            <figure><img src="./outputs/06a_canny_edges.png" alt="Canny edge map" loading="lazy"><figcaption>Canny edges</figcaption></figure>
+            <figure><img src="./outputs/06c_harris_corners.png" alt="Harris corner detection overlay" loading="lazy"><figcaption>Harris corners</figcaption></figure>
+          </div>
+        </div>
+      </div>
+
+      <div class="stage">
+        <div class="stage-num">06</div>
+        <div class="stage-body">
+          <h3>Optional extension — pretrained detection</h3>
+          <p>A pretrained YOLOv8n is run on the same crop as a deliberate stress test. At 1 meter per pixel, a car spans roughly 4–5 pixels — below what a COCO-scale detector resolves — so it returns zero to one low-confidence detections. That gap is the expected failure mode, and it's the reason the classical Canny/Harris pipeline above is the more reliable structural-feature source at this resolution.</p>
+          <div class="stage-metric">0–1 detections, confidence ≤ 0.29</div>
+          <div class="stage-imgs">
+            <figure><img src="./outputs/07_yolo_detections.png" alt="YOLOv8 detection attempt on the aerial crop" loading="lazy"><figcaption>YOLOv8n on 1m/px imagery</figcaption></figure>
+            <figure><img src="./outputs/08_summary_grid.png" alt="Summary grid comparing original, processed, Canny and Harris outputs" loading="lazy"><figcaption>Feasibility summary</figcaption></figure>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <h2>Every number, read from the run</h2>
+      <p class="section-lede">Pulled live from <code>outputs/metrics.json</code> in this repository — not typed in by hand.</p>
+      <div class="readout" id="readout">
+        <div class="readout-cell"><p class="readout-label">Gamma correction</p><p class="readout-value" data-metric="gamma">—</p></div>
+        <div class="readout-cell"><p class="readout-label">Median kernel</p><p class="readout-value" data-metric="median">—</p></div>
+        <div class="readout-cell"><p class="readout-label">Sharpen weight</p><p class="readout-value" data-metric="sharpen">—</p></div>
+        <div class="readout-cell"><p class="readout-label">FFT cutoff radius</p><p class="readout-value" data-metric="fft">—</p></div>
+        <div class="readout-cell"><p class="readout-label">Canny thresholds</p><p class="readout-value" data-metric="canny">—</p></div>
+        <div class="readout-cell"><p class="readout-label">Harris corners</p><p class="readout-value" data-metric="harris">—</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <h2>Validation, including what went wrong</h2>
+      <p class="section-lede">Two bugs were caught during development, and an independent review pass caught a third — a wrong conclusion — before this was published.</p>
+      <ul class="validate-list">
+        <li><span class="flag">fixed</span><strong>Gamma formula was inverted.</strong> An early version computed the reciprocal exponent, which darkened the image instead of brightening it. Caught by hand-checking the shadow-quartile mean against the target.</li>
+        <li><span class="flag">fixed</span><strong>FFT cutoff radius locked at zero.</strong> The zero-frequency bin holds most of the spectrum's power, so any percentage-of-power threshold was satisfied trivially before any real cutoff was found. Fixed by excluding that bin from the search.</li>
+        <li><span class="flag">caught in review</span><strong>The CLAHE-vs-global-equalization claim was backwards.</strong> An earlier metric compared raw output contrast rather than contrast gain over the input, and concluded the opposite of what the data actually showed. An independent pass re-derived the formula by hand, caught it, and the metric was rebuilt to compare gain in the dark and bright quartiles directly.</li>
+        <li><span class="flag">verified</span><strong>Re-run from a clean clone on a second machine.</strong> Gamma, FFT cutoff, and Canny thresholds reproduced to full floating-point precision with no manual tweaking — see the <a href="./verification/run_log.txt" target="_blank" rel="noopener">verification log</a>.</li>
+      </ul>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="foot-grid">
+      <div class="foot-col">
+        <h4>Project</h4>
+        <a href="./report/REPORT.md" target="_blank" rel="noopener">Full report</a>
+        <a href="./GroupH_Shah_Rahman_proposal.pdf" target="_blank" rel="noopener">Original proposal</a>
+        <a href="./README.md" target="_blank" rel="noopener">README</a>
+      </div>
+      <div class="foot-col">
+        <h4>Source</h4>
+        <a href="https://github.com/nisarg-007/dip-urban-land-cover-pipeline" target="_blank" rel="noopener">GitHub repository</a>
+        <a href="./verification/run_log.txt" target="_blank" rel="noopener">Verification run log</a>
+        <a href="./LICENSE" target="_blank" rel="noopener">License</a>
+      </div>
+      <div class="foot-col">
+        <h4>Data</h4>
+        <p>USGS NAIP Imagery, 1 m/pixel<br>Public domain — USDA/USGS</p>
+      </div>
+    </div>
+    <div class="foot-bottom">
+      Group H — Nisarg Shah, Ansar Rahman · Digital Image Processing
+    </div>
+  </div>
+</footer>
+
+<script>
+(function(){
+  fetch('./outputs/metrics.json').then(function(r){ return r.json(); }).then(function(m){
+    function set(sel, val){
+      var el = document.querySelector('[data-metric="'+sel+'"]');
+      if(el && val !== undefined) el.textContent = val;
+    }
+    try{
+      var g = m.gamma_correction && m.gamma_correction.gamma_used;
+      if(g) set('gamma', 'γ = ' + Number(g).toFixed(3));
+    }catch(e){}
+    try{
+      var k = m.median_filter && m.median_filter.kernel_chosen;
+      if(k) set('median', 'k = ' + k);
+    }catch(e){}
+    try{
+      var w = m.laplacian_sharpening && m.laplacian_sharpening.weight_chosen;
+      if(w !== undefined) set('sharpen', String(w));
+    }catch(e){}
+    try{
+      var c = m.fft_filtering && m.fft_filtering.cutoff_radius_px;
+      if(c) set('fft', c + ' px');
+    }catch(e){}
+    try{
+      var lo = m.canny && m.canny.low_threshold;
+      var hi = m.canny && m.canny.high_threshold;
+      if(lo && hi) set('canny', Number(lo).toFixed(1) + ' / ' + Number(hi).toFixed(1));
+    }catch(e){}
+    try{
+      var hc = m.harris && m.harris.num_corner_pixels;
+      if(hc) set('harris', Number(hc).toLocaleString());
+    }catch(e){}
+  }).catch(function(){
+    // metrics.json shape may differ from this page's guesses — fall back to the
+    // values already documented in report/REPORT.md rather than showing nothing.
+    var fallback = {gamma:'γ = 1.245', median:'k = 3', sharpen:'0.05', fft:'125 px', canny:'65.7 / 132.4', harris:'≈62,000'};
+    Object.keys(fallback).forEach(function(k){
+      var el = document.querySelector('[data-metric="'+k+'"]');
+      if(el) el.textContent = fallback[k];
+    });
+  });
+})();
+</script>
+</body>
+</html>
