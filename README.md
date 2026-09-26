@@ -2,6 +2,8 @@
 
 Digital Image Processing — Project | Group H — Nisarg Shah, Ansar Rahman
 
+**Live demo:** https://nisarg-007.github.io/dip-urban-land-cover-pipeline/
+
 A classical (non-machine-learning) image-processing pipeline that improves the visual and
 structural interpretability of an urban satellite/aerial scene: correcting illumination, boosting
 local contrast, denoising and sharpening structure, separating coarse land cover from fine detail
