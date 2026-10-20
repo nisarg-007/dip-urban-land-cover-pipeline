@@ -84,7 +84,7 @@ striping, and the interchange ramp/road junctions — visually confirmed in `out
 
 **Optional YOLO extension.** A pretrained YOLOv8n (COCO weights) was run on the same 1 m crop
 (`outputs/07_yolo_detections.png`). At this ground sample distance, vehicles occupy roughly 4–6
-pixels across; the model returns zero-to-one detections at low confidence (≤0.29) on this frame.
+pixels across; the model returned no detections on this frame (`num_detections: 0` in `metrics.json`).
 This is the expected failure mode named in the proposal — a COCO-scale detector is not tuned for
 small, top-down, low-contrast objects at 1 m/pixel — and motivates the report's framing of the
 classical pipeline (Canny/Harris) as the more reliable structural-feature source at this
@@ -103,7 +103,7 @@ resolution, rather than treating the YOLO gap as a bug.
 | FFT spectrum / low / high | `05a`–`05d` | cutoff r=125 px (90% AC power) |
 | Canny | `06a_canny_edges.png`, `06b_gradient_histogram.png` | low=65.7, high=132.4, 27.6% edge px |
 | Harris | `06c_harris_corners.png` | k=0.04, ~62k corner px |
-| YOLOv8 extension | `07_yolo_detections.png` | 0–1 low-confidence detections |
+| YOLOv8 extension | `07_yolo_detections.png` | 0 detections |
 | Summary grid | `08_summary_grid.png` | side-by-side feasibility check |
 
 All five required categories (Point Processing, Histogram Processing, Spatial Filtering,
@@ -120,8 +120,8 @@ numerically justified pipeline over the actual interchange scene.
 - Two bugs were caught and fixed during development: (1) the gamma formula was initially
   inverted (producing a *darkening* exponent instead of brightening); (2) the FFT cutoff
   radius initially locked at 0 because the DC (mean-brightness) bin dominates cumulative power
-  — fixed by excluding the DC bin from the cutoff search. Both are visible as commented fixes in
-  `scripts/dip_pipeline.py`.
+  — fixed by excluding the DC bin from the cutoff search. The FFT fix is commented in
+  `scripts/dip_pipeline.py`; the gamma fix is the `gamma = ln(in)/ln(out)` line in §1a.
 - All nine output images were visually inspected against the source crop to confirm they are
   non-degenerate (not blank, not fully saturated, not inverted) and structurally sensible (Canny
   traces the visible road/ramp network and building footprints; Harris corners cluster on
@@ -131,8 +131,10 @@ numerically justified pipeline over the actual interchange scene.
   a real scale limitation rather than a broken model call.
 - The full script was independently re-run on a second machine (this project's local computer,
   separate from the environment it was developed in) to confirm the required five categories
-  reproduce byte-for-byte-equivalent parameter values with no manual tweaking: gamma, FFT cutoff,
-  and Canny thresholds all matched to full floating-point precision. The optional YOLO stage
+  reproduce the same parameter values with no manual tweaking: gamma, FFT cutoff, Canny
+  thresholds, median kernel and sharpening weight all matched exactly. A few float32 quality
+  metrics (CLAHE local-std ratios, median MSE) differ only around the 7th significant digit,
+  which is floating-point rounding across machines (see `verification/metrics.json`). The optional YOLO stage
   needs `ultralytics`/`torch`, a heavy dependency (~a few hundred MB); it was validated once
   where that was already installed, and the script degrades gracefully (logs the import error
   into `metrics.json` instead of crashing) on a machine that doesn't have it.

@@ -20,11 +20,19 @@ and fixed during development (an inverted gamma formula, and a degenerate FFT cu
 independent review that caught and corrected a wrong quantitative claim before this was published.
 The original project proposal is [`GroupH_Shah_Rahman_proposal.pdf`](GroupH_Shah_Rahman_proposal.pdf).
 
+**Phase 2 submission:** [`GroupH_Shah_Rahman_Phase2.ipynb`](GroupH_Shah_Rahman_Phase2.ipynb) and its PDF export
+[`GroupH_Shah_Rahman_Phase2.pdf`](GroupH_Shah_Rahman_Phase2.pdf). The notebook re-implements every stage with
+before/after figures, parameter experiments, per-step analysis, a metric summary, the updated pipeline, and next
+steps. Run it from the repo root with `jupyter nbconvert --to notebook --execute GroupH_Shah_Rahman_Phase2.ipynb`
+(needs `pandas` and `jinja2` in addition to the packages below).
+
 ## What's in this repo
 
 ```
 .
-├── GroupH_Shah_Rahman_proposal.pdf   original project proposal
+├── GroupH_Shah_Rahman_proposal.pdf   original project proposal (Phase 1)
+├── GroupH_Shah_Rahman_Phase2.ipynb   Phase 2 progress notebook (executed, figures embedded)
+├── GroupH_Shah_Rahman_Phase2.pdf     Phase 2 notebook exported to PDF
 ├── data/
 │   └── naip_raw.png                  the exact 1024x1024, 1 m/px NAIP crop used (source below)
 ├── scripts/
@@ -131,7 +139,7 @@ filtering, edge & corner detection) reproduce identical parameter values with no
 - **Canny**: thresholds of 65.7 / 132.4, set from the gradient-magnitude histogram, not defaults.
 - **Harris**: ~62k corner-flagged pixels, concentrated on building corners, parking-lot striping,
   and interchange ramp/road junctions.
-- **YOLOv8 (optional)**: 0–1 low-confidence (≤0.29) detections on this crop — the expected failure
+- **YOLOv8 (optional)**: no detections on this crop — the expected failure
   mode of a COCO-scale detector on ~4–5 px objects at 1 m/pixel ground sample distance, which is
   exactly why the classical Canny/Harris pipeline is the more reliable structural-feature source
   at this resolution.
