@@ -159,7 +159,7 @@
       <p class="hero-kicker">Digital Image Processing — Group H</p>
       <h1>Reading a city from its pixels</h1>
       <p class="hero-lede">A classical, non-machine-learning pipeline that corrects illumination, recovers local contrast, separates coarse land cover from fine structure, and extracts edges and corners from a real aerial scene — every parameter derived from the image's own statistics.</p>
-      <p class="hero-authors">Nisarg Shah, Ansar Rahman</p>
+      <p class="hero-authors">Nisarg Shah, Ansar Ur Rahman Mohammed</p>
 
       <div class="hero-frame">
         <img id="hero-img" src="./outputs/00_original_color.png" alt="Original NAIP aerial crop of the I-45 / US-59 interchange, downtown Houston" loading="eager">
@@ -222,8 +222,8 @@
         <div class="stage-num">04</div>
         <div class="stage-body">
           <h3>Frequency-domain filtering</h3>
-          <p>The FFT's zero-frequency bin holds most of the image's total power, so it's excluded before choosing a cutoff — otherwise any percentage-of-power threshold is satisfied trivially at radius zero. The smallest radius capturing 90% of the remaining AC power splits coarse land-cover blobs from the street grid and rooftops.</p>
-          <div class="stage-metric">cutoff radius = 125 px of 724 · 90% of AC power</div>
+          <p>The original script chose a cutoff as the smallest radius capturing 90% of AC power (excluding DC). That radius barely changed the image. Phase 2 replaces it with a Gaussian low-pass at $D_0$ = 30: the largest local-contrast removal before neighboring building blocks merge. The complementary high-pass, percentile-stretched, is the structure map.</p>
+          <div class="stage-metric">Phase 2: Gaussian D<sub>0</sub> = 30 (63% local contrast removed) · original 90%-power rule: r = 125</div>
           <div class="stage-imgs">
             <figure><img src="./outputs/05a_fft_magnitude_spectrum.png" alt="FFT magnitude spectrum" loading="lazy"><figcaption>Magnitude spectrum</figcaption></figure>
             <figure><img src="./outputs/05c_fft_lowpass.png" alt="Low-pass filtered image" loading="lazy"><figcaption>Low-pass · coarse land cover</figcaption></figure>
@@ -236,8 +236,8 @@
         <div class="stage-num">05</div>
         <div class="stage-body">
           <h3>Edge and corner detection</h3>
-          <p>Canny's thresholds come from the median of the gradient-magnitude histogram, computed on the sharpened image, rather than fixed defaults. Harris corner response is thresholded at 1% of its own maximum, concentrating on building corners, lot striping, and interchange ramp junctions.</p>
-          <div class="stage-metric">Canny 65.7 / 132.4 (27.6% edge px) · Harris ≈62k corner px</div>
+          <p>Phase 2 runs Canny after a Gaussian blur, with 1.0× / 2.0× median-gradient thresholds, so the map is outlines rather than texture. Harris is run on the same blurred image at 5% of max response. The figures below are from the original script (unblurred Canny at 0.66× / 1.33×, Harris at 1% of max).</p>
+          <div class="stage-metric">Phase 2: Canny 68.0 / 136.1 (16.1% edge px) · Harris ~1,959 clusters · original: 65.7 / 132.4, ~62k px</div>
           <div class="stage-imgs">
             <figure><img src="./outputs/06a_canny_edges.png" alt="Canny edge map" loading="lazy"><figcaption>Canny edges</figcaption></figure>
             <figure><img src="./outputs/06c_harris_corners.png" alt="Harris corner detection overlay" loading="lazy"><figcaption>Harris corners</figcaption></figure>
@@ -249,8 +249,8 @@
         <div class="stage-num">06</div>
         <div class="stage-body">
           <h3>Optional extension — pretrained detection</h3>
-          <p>A pretrained YOLOv8n is run on the same crop as a deliberate stress test. At 1 meter per pixel, a car spans roughly 4–5 pixels — below what a COCO-scale detector resolves — so it returns zero to one low-confidence detections. That gap is the expected failure mode, and it's the reason the classical Canny/Harris pipeline above is the more reliable structural-feature source at this resolution.</p>
-          <div class="stage-metric">0–1 detections, confidence ≤ 0.29</div>
+          <p>A pretrained YOLOv8n is run on the same crop as a deliberate stress test. At 1 meter per pixel, a car spans roughly 4–5 pixels — below what a COCO-scale detector resolves — so it returned no detections. That gap is the expected failure mode, and it's the reason the classical Canny/Harris pipeline above is the more reliable structural-feature source at this resolution.</p>
+          <div class="stage-metric">0 detections</div>
           <div class="stage-imgs">
             <figure><img src="./outputs/07_yolo_detections.png" alt="YOLOv8 detection attempt on the aerial crop" loading="lazy"><figcaption>YOLOv8n on 1m/px imagery</figcaption></figure>
             <figure><img src="./outputs/08_summary_grid.png" alt="Summary grid comparing original, processed, Canny and Harris outputs" loading="lazy"><figcaption>Feasibility summary</figcaption></figure>
@@ -263,14 +263,14 @@
   <section>
     <div class="wrap">
       <h2>Every number, read from the run</h2>
-      <p class="section-lede">Pulled live from <code>outputs/metrics.json</code> in this repository — not typed in by hand.</p>
+      <p class="section-lede">Phase 2 notebook settings. Gamma, median and sharpen still match <code>outputs/metrics.json</code>; FFT, Canny and Harris are the revised Phase 2 choices.</p>
       <div class="readout" id="readout">
         <div class="readout-cell"><p class="readout-label">Gamma correction</p><p class="readout-value" data-metric="gamma">—</p></div>
         <div class="readout-cell"><p class="readout-label">Median kernel</p><p class="readout-value" data-metric="median">—</p></div>
         <div class="readout-cell"><p class="readout-label">Sharpen weight</p><p class="readout-value" data-metric="sharpen">—</p></div>
-        <div class="readout-cell"><p class="readout-label">FFT cutoff radius</p><p class="readout-value" data-metric="fft">—</p></div>
-        <div class="readout-cell"><p class="readout-label">Canny thresholds</p><p class="readout-value" data-metric="canny">—</p></div>
-        <div class="readout-cell"><p class="readout-label">Harris corners</p><p class="readout-value" data-metric="harris">—</p></div>
+        <div class="readout-cell"><p class="readout-label">FFT cutoff</p><p class="readout-value" data-metric="fft">Gaussian D<sub>0</sub> = 30</p></div>
+        <div class="readout-cell"><p class="readout-label">Canny thresholds</p><p class="readout-value" data-metric="canny">68.0 / 136.1</p></div>
+        <div class="readout-cell"><p class="readout-label">Harris clusters</p><p class="readout-value" data-metric="harris">~1,959</p></div>
       </div>
     </div>
   </section>
@@ -296,6 +296,7 @@
         <h4>Project</h4>
         <a href="./report/REPORT.md" target="_blank" rel="noopener">Full report</a>
         <a href="./GroupH_Shah_Rahman_proposal.pdf" target="_blank" rel="noopener">Original proposal</a>
+        <a href="./GroupH_Shah_Rahman_Phase2.pdf" target="_blank" rel="noopener">Phase 2 report</a>
         <a href="./README.md" target="_blank" rel="noopener">README</a>
       </div>
       <div class="foot-col">
@@ -310,7 +311,7 @@
       </div>
     </div>
     <div class="foot-bottom">
-      Group H — Nisarg Shah, Ansar Rahman · Digital Image Processing
+      Group H — Nisarg Shah, Ansar Ur Rahman Mohammed · Digital Image Processing
     </div>
   </div>
 </footer>
@@ -334,23 +335,12 @@
       var w = m.laplacian_sharpening && m.laplacian_sharpening.weight_chosen;
       if(w !== undefined) set('sharpen', String(w));
     }catch(e){}
-    try{
-      var c = m.fft_filtering && m.fft_filtering.cutoff_radius_px;
-      if(c) set('fft', c + ' px');
-    }catch(e){}
-    try{
-      var lo = m.canny && m.canny.low_threshold;
-      var hi = m.canny && m.canny.high_threshold;
-      if(lo && hi) set('canny', Number(lo).toFixed(1) + ' / ' + Number(hi).toFixed(1));
-    }catch(e){}
-    try{
-      var hc = m.harris && m.harris.num_corner_pixels;
-      if(hc) set('harris', Number(hc).toLocaleString());
-    }catch(e){}
+    // FFT / Canny / Harris are Phase 2 notebook settings, not the original script's metrics.json.
+    set('fft', 'Gaussian D0 = 30');
+    set('canny', '68.0 / 136.1');
+    set('harris', '~1,959');
   }).catch(function(){
-    // metrics.json shape may differ from this page's guesses — fall back to the
-    // values already documented in report/REPORT.md rather than showing nothing.
-    var fallback = {gamma:'γ = 1.245', median:'k = 3', sharpen:'0.05', fft:'125 px', canny:'65.7 / 132.4', harris:'≈62,000'};
+    var fallback = {gamma:'γ = 1.245', median:'k = 3', sharpen:'0.05', fft:'Gaussian D0 = 30', canny:'68.0 / 136.1', harris:'~1,959'};
     Object.keys(fallback).forEach(function(k){
       var el = document.querySelector('[data-metric="'+k+'"]');
       if(el) el.textContent = fallback[k];

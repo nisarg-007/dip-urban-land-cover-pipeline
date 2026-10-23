@@ -1,6 +1,6 @@
 """
 Urban Land Cover Analysis Pipeline
-Group H - Nisarg Shah, Ansar Rahman
+Group H - Nisarg Shah, Ansar Ur Rahman Mohammed
 Digital Image Processing course project
 
 Implements every stage from the proposal on a real 1024x1024 NAIP (1 m) crop

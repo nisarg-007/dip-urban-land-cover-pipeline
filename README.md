@@ -1,6 +1,6 @@
 # Urban Land Cover Analysis Pipeline
 
-Digital Image Processing — Project | Group H — Nisarg Shah, Ansar Rahman
+Digital Image Processing — Project | Group H — Nisarg Shah, Ansar Ur Rahman Mohammed
 
 **Live demo:** https://nisarg-007.github.io/dip-urban-land-cover-pipeline/
 
@@ -134,11 +134,15 @@ filtering, edge & corner detection) reproduce identical parameter values with no
   salt-and-pepper noise, while best preserving edge structure.
 - **Laplacian sharpening**: weight 0.05 is the largest tested that keeps hard-clipped pixels at or
   under a 5% budget, avoiding visible overshoot/ringing on the high-dynamic-range CLAHE output.
-- **FFT low/high-pass**: cutoff radius of 125 cycles (on the 1024 px frame) captures 90% of the
-  image's own AC power spectrum.
-- **Canny**: thresholds of 65.7 / 132.4, set from the gradient-magnitude histogram, not defaults.
-- **Harris**: ~62k corner-flagged pixels, concentrated on building corners, parking-lot striping,
-  and interchange ramp/road junctions.
+- **FFT low/high-pass (Phase 2)**: Gaussian D0 = 30, chosen as the largest local-contrast removal
+  before neighboring building blocks merge (63% of local contrast removed). The original script's
+  90%-AC-power rule gave r = 125 on the raw grayscale / r = 138 on CLAHE, which barely changed the
+  image (only 19% of local contrast removed).
+- **Canny (Phase 2)**: Gaussian blur, then 1.0× / 2.0× median-gradient thresholds (68.0 / 136.1),
+  16.1% edge pixels and 32% speckle segments. The original script's 0.66× / 1.33× rule on the
+  unblurred image (65.7 / 132.4) marked 27.6% of pixels as edges.
+- **Harris (Phase 2)**: blurred input, threshold 0.05 × max response, k = 0.04 (~1,959 corner
+  clusters). The original script's 0.01 × max threshold flagged ~62k corner pixels.
 - **YOLOv8 (optional)**: no detections on this crop — the expected failure
   mode of a COCO-scale detector on ~4–5 px objects at 1 m/pixel ground sample distance, which is
   exactly why the classical Canny/Harris pipeline is the more reliable structural-feature source

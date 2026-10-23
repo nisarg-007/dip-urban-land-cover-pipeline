@@ -1,6 +1,6 @@
 # Urban Land Cover Analysis Pipeline — Execution Report
 
-Group H — Nisarg Shah, Ansar Rahman | Digital Image Processing | Project Proposal follow-up
+Group H — Nisarg Shah, Ansar Ur Rahman Mohammed | Digital Image Processing | Project Proposal follow-up
 
 This report executes the pipeline described in `GroupH_Shah_Rahman_proposal.pdf` end-to-end on a
 real NAIP crop, using the actual proposal scene (I-45/US-59 interchange, downtown Houston, TX),
